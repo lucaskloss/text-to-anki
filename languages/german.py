@@ -7,14 +7,6 @@ class GermanProcessor(LanguageProcessor):
     Can filter for content words and extract unique vocabulary.
     """
     
-    # Fallback for common irregular verbs that spaCy may not lemmatize correctly
-    VERB_FIXES = {
-        'gegessen': 'essen',
-        'gefressen': 'fressen',
-        'gemessen': 'messen',
-        'vergessen': 'vergessen',  # Already correct, but included for completeness
-    }
-    
     def __init__(self, nlp=None):
         """
         nlp: Optional, pass an existing spaCy model for efficiency.
@@ -32,7 +24,7 @@ class GermanProcessor(LanguageProcessor):
                 except OSError:
                     raise OSError("No German spaCy model found. Please install one with: python -m spacy download de_core_news_sm")
 
-    def process(self, text: str, content_words_only: bool = False):
+    def process(self, text: str, content_words_only: bool = True):
         """
         Yields token information dicts for each token in the text.
         If content_words_only is True, yields only content words (NOUN, VERB, ADJ).
@@ -42,8 +34,6 @@ class GermanProcessor(LanguageProcessor):
             for token in sent:
                 # Apply lemma fixes for known irregular verbs
                 lemma = token.lemma_.lower()
-                if lemma in self.VERB_FIXES:
-                    lemma = self.VERB_FIXES[lemma]
                 
                 token_info = {
                     "surface": token.text,
@@ -61,12 +51,15 @@ class GermanProcessor(LanguageProcessor):
         """
         return token["pos"] in {"NOUN", "VERB", "ADJ"}
 
-    def extract_unique_lemmas(self, text: str, content_words_only: bool = True):
-        """
-        Returns a set of unique lemmas from the text.
-        If content_words_only is True, only content word lemmas are included.
-        """
-        return set(
-            token["lemma"]
-            for token in self.process(text, content_words_only=content_words_only)
-        )
+    def extract_unique_lemmas(self, text):
+        doc = self.nlp(text)
+        lemmas = set()
+        for token in doc:
+            if (
+            not token.is_alpha  # skip non-alphabetic tokens
+            or token.is_stop    # skip stopwords
+            or token.like_num   # skip numbers
+            ):
+                continue
+            lemmas.add(token.lemma_.lower())
+        return lemmas
