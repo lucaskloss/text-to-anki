@@ -23,10 +23,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.language_selector.addItems(["German", "Japanese"])
         layout.addWidget(self.language_selector)
 
-        # Input text area
+        # Input text area with file load button
+        input_layout = QtWidgets.QHBoxLayout()
         self.input_text = QtWidgets.QTextEdit()
         self.input_text.setPlaceholderText("Enter or paste your text here...")
-        layout.addWidget(self.input_text)
+        input_layout.addWidget(self.input_text)
+        self.load_file_button = QtWidgets.QPushButton("Load File...")
+        input_layout.addWidget(self.load_file_button)
+        layout.addLayout(input_layout)
 
         # Export file selection
         file_layout = QtWidgets.QHBoxLayout()
@@ -59,6 +63,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.process_button.clicked.connect(self.process_text)
         self.export_button.clicked.connect(self.export_vocab)
         self.browse_button.clicked.connect(self.select_export_file)
+        self.load_file_button.clicked.connect(self.load_text_file)
+
+    def load_text_file(self):
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open Text File", "", "Text Files (*.txt *.epub *.md *.rtf *.pdf);;All Files (*)")
+        if file_path:
+            try:
+                from core.text_loader import TextLoader
+                loader = TextLoader(file_path)
+                text = loader.load_text()
+                self.input_text.setPlainText(text)
+            except Exception as e:
+                self.output_area.append(f"\nFailed to load file: {e}")
 
         # Set default dictionary directories
         self.dict_dirs = {
