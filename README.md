@@ -1,2 +1,2 @@
 # text-to-anki
-Convert text files into anki decks by automatically recognizing words and translating them using a dictionary. Exemple sentences are used in which the chosen words appear. Possibility to filter words by learning level.
+A Python tool to convert text into Anki flashcards, supporting multiple languages and formats. It uses spaCy for natural language processing and genanki for creating Anki decks. The tool can extract vocabulary, example sentences, and definitions to create effective flashcards for language learning.

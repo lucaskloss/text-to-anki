@@ -1,0 +1,11 @@
+.venv
+.python-version
+__pycache__/
+.vscode/
+.pytest_cache/
+*.pyc
+*.csv
+*.apkg
+*.epub
+*.pdf
+*.txt

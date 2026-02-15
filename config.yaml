@@ -1,0 +1,5 @@
+language: german
+export_format: csv
+target_level: C1
+pos_whitelist: [NOUN, VERB, ADJ]
+min_occurrences: 2
