@@ -1,0 +1,10 @@
+spacy
+genanki
+pandas
+pytest
+ebooklib
+PyPDF2
+beautifulsoup4
+lxml
+pyside6
+gradio
