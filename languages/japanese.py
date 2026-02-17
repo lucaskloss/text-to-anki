@@ -1,7 +1,6 @@
 import spacy
-from languages.base import LanguageProcessor
 
-class JapaneseProcessor(LanguageProcessor):
+class JapaneseProcessor():
     """
     Processes Japanese text using spaCy for tokenization, lemmatization, and POS tagging.
     Can filter for content words and extract unique vocabulary.
@@ -16,18 +15,13 @@ class JapaneseProcessor(LanguageProcessor):
         else:
             # Try to load the small model first (more widely compatible)
             try:
-                self.nlp = spacy.load("ja_core_news_sm")
+                self.nlp = spacy.load("ja_core_news_md")
             except OSError:
-                # Fall back to large model if available
-                try:
-                    self.nlp = spacy.load("ja_core_news_lg")
-                except OSError:
-                    raise OSError("No Japanese spaCy model found. Please install one with: python -m spacy download ja_core_news_sm")
+                raise OSError("No Japanese spaCy model found. Please install one with: python -m spacy download ja_core_news_md")
 
-    def process(self, text: str, content_words_only: bool = True):
+    def process(self, text: str):
         """
         Yields token information dicts for each token in the text.
-        If content_words_only is True, yields only content words (NOUN, VERB, ADJ).
         """
         doc = self.nlp(text)
         for sent in doc.sents:
@@ -41,15 +35,9 @@ class JapaneseProcessor(LanguageProcessor):
                     "pos": token.pos_,
                     "sentence": sent.text
                 }
-                if content_words_only and not self.is_content_word(token_info):
+                if token_info["pos"] not in {"NOUN", "VERB", "ADJ"}:
                     continue
                 yield token_info
-
-    def is_content_word(self, token):
-        """
-        Returns True if the token dict is a content word (NOUN, VERB, ADJ).
-        """
-        return token["pos"] in {"NOUN", "VERB", "ADJ"}
 
     def extract_unique_lemmas(self, text):
         doc = self.nlp(text)
