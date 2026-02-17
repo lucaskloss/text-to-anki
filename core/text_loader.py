@@ -9,16 +9,12 @@ class TextLoader:
 
     def load_text(self):
         ext = os.path.splitext(self.file_path)[1].lower()
-        if ext == '.txt':
-            return self._load_txt()
-        elif ext == '.epub':
+        if ext == '.epub':
             return self._load_epub()
-        elif ext == '.md':
-            return self._load_md()
         elif ext == '.pdf':
             return self._load_pdf()
         else:
-            raise ValueError(f"Unsupported file format: {ext}")
+            return self._load_plain_text()
 
     def _load_pdf(self):
         if PyPDF2 is None:
@@ -32,12 +28,7 @@ class TextLoader:
                     text.append(page_text)
         return "\n".join(text)
 
-    def _load_txt(self):
-        with open(self.file_path, encoding="utf-8") as f:
-            return f.read()
-
-    def _load_md(self):
-        # Markdown is just text, so treat as plain text
+    def _load_plain_text(self):
         with open(self.file_path, encoding="utf-8") as f:
             return f.read()
 

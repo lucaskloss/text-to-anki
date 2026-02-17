@@ -46,7 +46,6 @@ pyenv local 3.13.14
 4. The generated Anki deck will be saved in the specified location, and you can import it into Anki to start studying.
 
 The models used for processing the text are available at [spacy.io](https://spacy.io/models) and can be downloaded using the command line interface of spaCy. The models chosen are written in the setup.sh file, but you can change them if you want to use a different model or a custom one. The models used for the moment are the medium-sized models for German and Japanese, which provide a good balance between accuracy and speed. However, you can experiment with different models to see which one works best for your specific use case.
-```
 
 The only supported languages for now are German and Japanese, but more languages will be added in the future. The tool can handle various text formats, such as .txt, .epub, .pdf. The models used for the moment are simple and there is a lot of room for improvement. More features will be added in the future, including support for more languages, more text formats such as subtitle files, and more customization options for the flashcards. The most importants ones being the ability to add the example sentences from which the vocabulary was extracted, and the ability to filter the vocabulary by frequency or level. For instance, you could choose to only add words to a deck that are aimed at B2 or C1 learners and avoid adding more common words that you already know and would waste time reviewing or removing from the deck.
 
