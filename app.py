@@ -1,5 +1,6 @@
-import gradio as gr
 import os
+import streamlit as st
+
 from languages.german import GermanProcessor
 from languages.japanese import JapaneseProcessor
 from core.dictionary_loader import DictionaryLoader
@@ -13,8 +14,14 @@ DICT_DIRS = {
     "Japanese": os.path.abspath(os.path.join(BASE_DIR, "data", "kty-ja-en")),
 }
 
-# Global state for vocab_dict and last_text (per session)
-session_state = {}
+if 'vocab_dict' not in st.session_state:
+    st.session_state['vocab_dict'] = None
+if 'last_text' not in st.session_state:
+    st.session_state['last_text'] = ""
+if 'output_area' not in st.session_state:
+    st.session_state['output_area'] = ""
+if 'export_result' not in st.session_state:
+    st.session_state['export_result'] = ""
 
 def process_text(text, language):
     if not text.strip():
@@ -38,9 +45,8 @@ def process_text(text, language):
             vocab_lines.append(f"{lemma}: {', '.join(translations[:3])}")
         else:
             vocab_lines.append(f"{lemma}: [no translation found]")
-    # Store in session state
-    session_state["vocab_dict"] = vocab_dict
-    session_state["last_text"] = text
+    st.session_state["vocab_dict"] = vocab_dict
+    st.session_state["last_text"] = text
     return "\n".join(vocab_lines), vocab_dict
 
 def export_vocab(vocab_dict, export_format, export_filename):
@@ -64,45 +70,44 @@ def export_vocab(vocab_dict, export_format, export_filename):
     except Exception as e:
         return f"Export failed: {e}"
 
-def gradio_process(text, language, export_format, export_filename):
-    output, vocab_dict = process_text(text, language)
-    session_state["vocab_dict"] = vocab_dict
-    return output, ""
+st.title("Text to Anki Vocabulary Extractor")
 
-def gradio_export(export_format, export_filename):
-    vocab_dict = session_state.get("vocab_dict")
-    result = export_vocab(vocab_dict, export_format, export_filename)
-    return result
+col1, col2 = st.columns(2)
+with col1:
+    language = st.selectbox("Language", ["German", "Japanese"], index=0)
+with col2:
+    export_format = st.selectbox("Export Format", ["CSV", "Anki", "Both"], index=0)
 
-def gradio_load_file(file):
-    if file is None:
-        return ""
+uploaded_file = st.file_uploader("Load File", type=["txt", "epub", "md", "rtf", "pdf"])
+if uploaded_file is not None:
     try:
-        content = file.read().decode("utf-8")
-        return content
+        content = uploaded_file.read().decode("utf-8")
+        if content != st.session_state.get("last_text", ""):
+            st.session_state["last_text"] = content
+            st.rerun()
     except Exception as e:
-        return f"Failed to load file: {e}"
+        st.error(f"Failed to load file: {e}")
 
-with gr.Blocks() as demo:
-    gr.Markdown("# Text to Anki Vocabulary Extractor")
-    with gr.Row():
-        language = gr.Dropdown(["German", "Japanese"], value="German", label="Language")
-        export_format = gr.Dropdown(["CSV", "Anki", "Both"], value="CSV", label="Export Format")
-    with gr.Row():
-        input_text = gr.Textbox(lines=10, label="Input Text", placeholder="Enter or paste your text here...")
-        file_input = gr.File(label="Load File", file_types=[".txt", ".epub", ".md", ".rtf", ".pdf"])
-    with gr.Row():
-        export_filename = gr.Textbox(label="Export File Name (e.g. output.csv or output.apkg)")
-    process_btn = gr.Button("Process Text")
-    export_btn = gr.Button("Export")
-    output_area = gr.Textbox(label="Output", lines=10, interactive=False)
-    export_result = gr.Textbox(label="Export Result", lines=2, interactive=False)
+input_text = st.text_area("Input Text", value=st.session_state.get("last_text", ""), height=200, placeholder="Enter or paste your text here...")
 
-    # File loader
-    file_input.change(fn=gradio_load_file, inputs=file_input, outputs=input_text)
-    # Process button
-    process_btn.click(fn=gradio_process, inputs=[input_text, language, export_format, export_filename], outputs=[output_area, export_result])
-    # Export button
-    export_btn.click(fn=gradio_export, inputs=[export_format, export_filename], outputs=export_result)
+export_filename = st.text_input("Export File Name (e.g. output.csv or output.apkg)")
 
-demo.launch()
+if st.button("Process Text"):
+    if input_text.strip():
+        output, _ = process_text(input_text, language)
+        st.session_state["output_area"] = output
+    else:
+        st.session_state["output_area"] = "Please enter some text."
+
+if st.button("Export"):
+    vocab_dict = st.session_state.get("vocab_dict")
+    result = export_vocab(vocab_dict, export_format, export_filename)
+    st.session_state["export_result"] = result
+
+# Display output area
+if st.session_state.get("output_area"):
+    st.text_area("Output", value=st.session_state["output_area"], height=200, disabled=True, key="output_display")
+
+# Display export result
+if st.session_state.get("export_result"):
+    st.text_area("Export Result", value=st.session_state["export_result"], height=50, disabled=True, key="export_display")

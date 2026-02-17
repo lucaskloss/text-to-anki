@@ -7,4 +7,4 @@ PyPDF2
 beautifulsoup4
 lxml
 pyside6
-gradio
+streamlit
