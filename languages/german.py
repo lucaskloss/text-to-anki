@@ -1,4 +1,8 @@
 import spacy
+from german_compound_splitter import comp_split
+import io
+from contextlib import redirect_stdout
+from typing import Iterator
 
 class GermanProcessor():
     """
@@ -10,16 +14,9 @@ class GermanProcessor():
         """
         nlp: Optional, pass an existing spaCy model for efficiency.
         """
-        if nlp is not None:
-            self.nlp = nlp
-        else:
-            # Try to load the small model first (more widely compatible)
-            try:
-                self.nlp = spacy.load("de_core_news_md")
-            except OSError:
-                raise OSError("No German spaCy model found. Please install one with: python -m spacy download de_core_news_md")
+        self.nlp = nlp or spacy.load("de_core_news_md")
 
-    def process(self, text: str):
+    def process(self, text: str) -> Iterator[dict]:
         """
         Yields token information dicts for each token in the text.
         """
@@ -39,7 +36,7 @@ class GermanProcessor():
                     continue
                 yield token_info
 
-    def extract_unique_lemmas(self, text):
+    def extract_unique_lemmas(self, text) -> set:
         doc = self.nlp(text)
         lemmas = set()
         for token in doc:
@@ -51,3 +48,37 @@ class GermanProcessor():
                 continue
             lemmas.add(token.lemma_.lower())
         return lemmas
+
+    def build_compound_splitter(self, known_words):
+        automaton = comp_split.ahocorasick.Automaton()
+        for word in known_words:
+            if not word:
+                continue
+            normalized = word.lower().strip()
+            if not normalized or len(normalized) < 3:
+                continue
+            automaton.add_word(normalized, (word[:1].isupper(), word))
+        automaton.make_automaton()
+        return automaton
+
+    def split_compound(self, word, splitter):
+        if not word or not splitter:
+            return []
+
+        with redirect_stdout(io.StringIO()):
+            parts = comp_split.dissect(
+                word,
+                splitter,
+                only_nouns=False,
+                make_singular=False,
+                mask_unknown=True,
+            )
+
+        if not parts or len(parts) < 2:
+            return []
+
+        normalized_parts = [part.lower() for part in parts if isinstance(part, str) and part.isalpha() and len(part) >= 3]
+        if len(normalized_parts) < 2:
+            return []
+
+        return normalized_parts

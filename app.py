@@ -3,9 +3,9 @@ import streamlit as st
 
 from languages.german import GermanProcessor
 from languages.japanese import JapaneseProcessor
-from core.dictionary_loader import DictionaryLoader
-from anki.csv_exporter import CSVExporter
-from anki.genanki_exporter import AnkiExporter
+from load.dictionary_loader import DictionaryLoader
+from export.csv_exporter import CSVExporter
+from export.genanki_exporter import AnkiExporter
 
 # Set default dictionary directories (relative to this file)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,10 +36,29 @@ def process_text(text, language):
         return "Unsupported language selected.", None
     unique_lemmas = processor.extract_unique_lemmas(text)
     dictionary = DictionaryLoader(dict_dir)
+    compound_splitter = None
+    if language == "German":
+        compound_splitter = processor.build_compound_splitter(dictionary.word_map.keys())
+
     vocab_lines = []
     vocab_dict = {}
     for lemma in sorted(unique_lemmas):
         translations = dictionary.lookup(lemma)
+
+        if not translations and language == "German" and compound_splitter:
+            split_parts = processor.split_compound(lemma, compound_splitter)
+            if split_parts:
+                part_translation_lines = []
+                for part in split_parts:
+                    part_translations = dictionary.lookup(part)
+                    if not part_translations:
+                        part_translation_lines = []
+                        break
+                    part_translation_lines.append(f"{part}: {', '.join(part_translations[:2])}")
+
+                if part_translation_lines:
+                    translations = [f"[compound] {' + '.join(split_parts)}"] + part_translation_lines
+
         vocab_dict[lemma] = translations
         if translations:
             vocab_lines.append(f"{lemma}: {', '.join(translations[:3])}")

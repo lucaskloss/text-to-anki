@@ -1,7 +1,7 @@
 import genanki
 import random
 import os
-from anki.note_model import create_note_model
+from export.note_model import create_note_model
 
 
 class AnkiExporter:

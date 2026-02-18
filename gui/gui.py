@@ -2,9 +2,9 @@ import PySide6.QtWidgets as QtWidgets
 
 from languages.german import GermanProcessor
 from languages.japanese import JapaneseProcessor
-from core.dictionary_loader import DictionaryLoader
-from anki.csv_exporter import CSVExporter
-from anki.genanki_exporter import AnkiExporter
+from load.dictionary_loader import DictionaryLoader
+from export.csv_exporter import CSVExporter
+from export.genanki_exporter import AnkiExporter
 import os
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -12,6 +12,14 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle("Text to Anki Vocabulary Extractor")
         self.setGeometry(100, 100, 800, 600)
+
+        # Set default dictionary directories
+        self.dict_dirs = {
+            "German": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dictionaries", "kty-de-en")),
+            "Japanese": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dictionaries", "kty-ja-en")),
+        }
+        self.vocab_dict = None
+        self.last_text = None
 
         # Central widget and layout
         central_widget = QtWidgets.QWidget()
@@ -69,20 +77,12 @@ class MainWindow(QtWidgets.QMainWindow):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open Text File", "", "Text Files (*.txt *.epub *.md *.rtf *.pdf);;All Files (*)")
         if file_path:
             try:
-                from core.text_loader import TextLoader
+                from load.text_loader import TextLoader
                 loader = TextLoader(file_path)
                 text = loader.load_text()
                 self.input_text.setPlainText(text)
             except Exception as e:
                 self.output_area.append(f"\nFailed to load file: {e}")
-
-        # Set default dictionary directories
-        self.dict_dirs = {
-            "German": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "kty-de-en")),
-            "Japanese": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "kty-ja-en")),
-        }
-        self.vocab_dict = None
-        self.last_text = None
 
     def process_text(self):
         text = self.input_text.toPlainText()
@@ -103,11 +103,29 @@ class MainWindow(QtWidgets.QMainWindow):
 
         unique_lemmas = processor.extract_unique_lemmas(text)
         dictionary = DictionaryLoader(dict_dir)
+        compound_splitter = None
+        if language == "German":
+            compound_splitter = processor.build_compound_splitter(dictionary.word_map.keys())
 
         vocab_lines = []
         vocab_dict = {}
         for lemma in sorted(unique_lemmas):
             translations = dictionary.lookup(lemma)
+
+            if not translations and language == "German" and compound_splitter:
+                split_parts = processor.split_compound(lemma, compound_splitter)
+                if split_parts:
+                    part_translation_lines = []
+                    for part in split_parts:
+                        part_translations = dictionary.lookup(part)
+                        if not part_translations:
+                            part_translation_lines = []
+                            break
+                        part_translation_lines.append(f"{part}: {', '.join(part_translations[:2])}")
+
+                    if part_translation_lines:
+                        translations = [f"[compound] {' + '.join(split_parts)}"] + part_translation_lines
+
             vocab_dict[lemma] = translations
             if translations:
                 vocab_lines.append(f"{lemma}: {', '.join(translations[:3])}")
