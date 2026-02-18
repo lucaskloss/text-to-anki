@@ -1,10 +1,10 @@
 
 import sys
-from gui.gui import MainWindow
+from gui.control import MainController
 from PySide6.QtWidgets import QApplication
 
 if __name__ == "__main__":
-	app = QApplication(sys.argv)
-	window = MainWindow()
-	window.show()
-	app.exec()
+    app = QApplication(sys.argv)
+    controller = MainController()
+    controller.view.show()
+    app.exec()
