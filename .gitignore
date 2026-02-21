@@ -8,4 +8,4 @@ __pycache__/
 *.apkg
 *.epub
 *.pdf
-*.DS_Store
+.DS_Store
