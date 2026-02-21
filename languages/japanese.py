@@ -39,15 +39,22 @@ class JapaneseProcessor():
                     continue
                 yield token_info
 
-    def extract_unique_lemmas(self, text):
+    def extract_unique_lemmas(self, text, progress_callback=None):
         doc = self.nlp(text)
         lemmas = set()
-        for token in doc:
+        total_tokens = len(doc)
+        for index, token in enumerate(doc, start=1):
             if (
             not token.is_alpha  # skip non-alphabetic tokens
             or token.is_stop    # skip stopwords
             or token.like_num   # skip numbers
             ):
+                if progress_callback and (index % 100 == 0 or index == total_tokens):
+                    progress_callback(index, total_tokens)
                 continue
             lemmas.add(token.lemma_.lower())
+
+            if progress_callback and (index % 100 == 0 or index == total_tokens):
+                progress_callback(index, total_tokens)
+
         return lemmas

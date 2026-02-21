@@ -6,5 +6,5 @@ ebooklib
 PyPDF2
 beautifulsoup4
 pyside6
-streamlit
+openai-whisper
 git+https://github.com/repodiac/german_compound_splitter.git

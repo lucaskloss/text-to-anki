@@ -17,12 +17,17 @@ cd text-to-anki
 ```bash
 pip install -r requirements.txt
 ```
-3. Download the necessary spaCy models:
+3. Install `ffmpeg` (required for audio transcription with Whisper):
+```bash
+brew install ffmpeg
+```
+If you still see `No such file or directory: 'ffmpeg'`, ensure Homebrew is in your shell PATH and restart VS Code.
+4. Download the necessary spaCy models:
 ```bash
 python -m spacy download de_core_news_md
 python -m spacy download ja_core_news_md
 ```
-4. Run the application:
+5. Run the application:
 ```bash
 python main.py
 ```
@@ -41,9 +46,12 @@ pyenv local 3.13.14
 4. Now you can proceed with installing the dependencies and running the application as mentioned above.
 ## Usage
 1. Launch the application by running `python main.py`.
-2. Use the GUI to input your text and configure the settings for your Anki flashcards.
-3. Click the "Generate" button to create your Anki deck.
-4. The generated Anki deck will be saved in the specified location, and you can import it into Anki to start studying.
+2. Use the GUI to input your text, click `Load File...` for text files (`.txt`, `.epub`, `.pdf`, etc.), or click `Load Audio...` for audio files (`.mp3`, `.m4a`, `.wav`, `.flac`, etc.).
+3. For audio files loaded via `Load Audio...`, transcription runs automatically with Whisper using language-aware defaults:
+	- German (`de`): `base`
+	- Japanese (`ja`): `small`
+4. Click the "Process Text" button to extract vocabulary.
+5. The generated Anki deck will be saved in the specified location, and you can import it into Anki to start studying.
 
 The models used for processing the text are available at [spacy.io](https://spacy.io/models) and can be downloaded using the command line interface of spaCy. The models chosen are written in the setup.sh file, but you can change them if you want to use a different model or a custom one. The models used for the moment are the medium-sized models for German and Japanese, which provide a good balance between accuracy and speed. However, you can experiment with different models to see which one works best for your specific use case.
 

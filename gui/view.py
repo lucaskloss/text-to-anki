@@ -23,6 +23,8 @@ class MainWindow(QtWidgets.QMainWindow):
         input_layout.addWidget(self.input_text)
         self.load_file_button = QtWidgets.QPushButton("Load File...")
         input_layout.addWidget(self.load_file_button)
+        self.load_audio_button = QtWidgets.QPushButton("Load Audio...")
+        input_layout.addWidget(self.load_audio_button)
         layout.addLayout(input_layout)
 
         # Export file selection
@@ -46,6 +48,15 @@ class MainWindow(QtWidgets.QMainWindow):
         # Export button
         self.export_button = QtWidgets.QPushButton("Export")
         layout.addWidget(self.export_button)
+
+        # Progress indicator
+        self.status_label = QtWidgets.QLabel("Ready")
+        layout.addWidget(self.status_label)
+
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setTextVisible(True)
+        layout.addWidget(self.progress_bar)
 
         # Output area
         self.output_area = QtWidgets.QTextEdit()
