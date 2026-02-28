@@ -22,10 +22,13 @@ pip install -r requirements.txt
 brew install ffmpeg
 ```
 If you still see `No such file or directory: 'ffmpeg'`, ensure Homebrew is in your shell PATH and restart VS Code.
-4. Download the necessary spaCy models:
+4. Download the necessary spaCy models by running:
 ```bash
-python -m spacy download de_core_news_md
-python -m spacy download ja_core_news_md
+bash models.sh
+```
+Or manually download a model from [spacy.io](https://spacy.io/models) and install it using:
+```bash
+python -m spacy download <model_name>
 ```
 5. Run the application:
 ```bash
