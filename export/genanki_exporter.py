@@ -33,7 +33,13 @@ class AnkiExporter:
         
         # Add notes to deck
         for lemma in sorted(vocab_dict.keys()):
-            translations = vocab_dict[lemma]
+            entry = vocab_dict[lemma]
+            if isinstance(entry, dict):
+                translations = entry.get('translations', [])
+            elif isinstance(entry, list):
+                translations = entry
+            else:
+                translations = []
             
             if translations:
                 # Clean up translations - take first few and format them

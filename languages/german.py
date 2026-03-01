@@ -28,10 +28,10 @@ class GermanProcessor():
                 if token.pos_ not in {"NOUN", "VERB", "ADJ", "ADV"}:
                     continue
                 lemma = token.lemma_.lower()
+                cases = []
+                prepositions = []
                 if token.pos_ == "VERB":
                     for child in token.children:
-                        cases = []
-                        prepositions = []
                         if child.pos_ in {"NOUN", "PRON"} and child.morph.get("Case"):
                             cases.append(child.morph.get("Case")[0])
                         elif child.dep_ in {"ADP", "prep"}:

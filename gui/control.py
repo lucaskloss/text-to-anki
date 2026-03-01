@@ -7,6 +7,7 @@ from export.genanki_exporter import AnkiExporter
 from gui.view import MainWindow
 from languages.german import GermanProcessor
 from languages.japanese import JapaneseProcessor
+from languages.italian import ItalianProcessor
 from load.audio_loader import transcribe_audio
 from load.dictionary_loader import DictionaryLoader
 from load.text_loader import TextLoader
@@ -16,6 +17,13 @@ AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".flac", ".ogg", ".aac", ".webm", ".
 LANGUAGE_CODE_MAP = {
     "German": "de",
     "Japanese": "ja",
+    "Italian": "it",
+}
+
+PROCESSORS = {
+    "German": GermanProcessor(),
+    "Japanese": JapaneseProcessor(),
+    "Italian": ItalianProcessor(),
 }
 
 class MainController:
@@ -25,6 +33,7 @@ class MainController:
         self.dict_dirs = {
             "German": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dictionaries", "kty-de-en")),
             "Japanese": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dictionaries", "kty-ja-en")),
+            "Italian": os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dictionaries", "kty-it-en")),
         }
         self.vocab_dict = None
         self.last_text = None
@@ -41,28 +50,6 @@ class MainController:
         self.view.load_file_button.setEnabled(enabled)
         self.view.load_audio_button.setEnabled(enabled)
         self.view.browse_button.setEnabled(enabled)
-
-    def _show_indeterminate_progress(self, status: str):
-        self.view.status_label.setText(status)
-        self.view.progress_bar.setVisible(True)
-        self.view.progress_bar.setRange(0, 0)
-        QtWidgets.QApplication.processEvents()
-
-    def _show_progress(self, status: str, value: int, maximum: int):
-        safe_maximum = max(1, maximum)
-        bounded_value = max(0, min(value, safe_maximum))
-        self.view.status_label.setText(status)
-        self.view.progress_bar.setVisible(True)
-        self.view.progress_bar.setRange(0, safe_maximum)
-        self.view.progress_bar.setValue(bounded_value)
-        QtWidgets.QApplication.processEvents()
-
-    def _reset_progress(self, status: str = "Ready"):
-        self.view.status_label.setText(status)
-        self.view.progress_bar.setVisible(False)
-        self.view.progress_bar.setRange(0, 100)
-        self.view.progress_bar.setValue(0)
-        QtWidgets.QApplication.processEvents()
 
     def load_text_file(self):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -96,14 +83,12 @@ class MainController:
                 selected_language = self.view.language_selector.currentText()
                 language_code = LANGUAGE_CODE_MAP.get(selected_language)
                 self._set_controls_enabled(False)
-                self._show_indeterminate_progress("Transcribing audio...")
                 text, transcript_path = transcribe_audio(file_path, language=language_code)
                 self.view.input_text.setPlainText(text)
                 self.view.output_area.append(f"Loaded audio transcript: {transcript_path}")
             except Exception as error:
                 self.view.output_area.append(f"\nFailed to transcribe audio: {error}")
             finally:
-                self._reset_progress()
                 self._set_controls_enabled(True)
 
     def process_text(self):
@@ -113,96 +98,24 @@ class MainController:
             return
 
         language = self.view.language_selector.currentText()
-        if language == "German":
-            processor = GermanProcessor()
-            dict_dir = self.dict_dirs["German"]
-        elif language == "Japanese":
-            processor = JapaneseProcessor()
-            dict_dir = self.dict_dirs["Japanese"]
-        else:
-            self.view.output_area.setPlainText("Unsupported language selected.")
-            return
-
+        processor = PROCESSORS.get(language)
+        dict_dir = self.dict_dirs.get(language)
         self._set_controls_enabled(False)
+        
         try:
-            self._show_progress("Analyzing text...", 0, 1)
-            unique_lemmas = processor.extract_unique_lemmas(
-                text,
-                progress_callback=lambda current, total: self._show_progress(
-                    f"Analyzing text... ({current}/{total} tokens)",
-                    current,
-                    total,
-                ),
-            )
-
-            self._show_indeterminate_progress("Preparing dictionary lookup...")
+            processor.process(text)
             dictionary = DictionaryLoader(dict_dir)
-            compound_splitter = None
-            if language == "German":
-                compound_splitter = processor.build_compound_splitter(dictionary.word_map.keys())
-
-            sorted_lemmas = sorted(unique_lemmas)
-            total_lemmas = len(sorted_lemmas)
-            vocab_lines = []
-            vocab_dict = {}
             translated_count = 0
-
-            for index, lemma in enumerate(sorted_lemmas, start=1):
-                self._show_progress(
-                    f"Looking up dictionary... ({index}/{total_lemmas})",
-                    index,
-                    total_lemmas,
-                )
-
+            for lemma in processor.vocabulary.keys():
                 translations = dictionary.lookup(lemma)
-
-                if not translations and language == "German":
-                    normalized_lemma = processor.normalize_zu_infinitive(lemma)
-                    if normalized_lemma and normalized_lemma != lemma:
-                        translations = dictionary.lookup(normalized_lemma)
-
-                if not translations and language == "German":
-                    ge_candidates = processor.normalize_ge_participle_candidates(lemma)
-                    for ge_candidate in ge_candidates:
-                        if ge_candidate == lemma:
-                            continue
-                        translations = dictionary.lookup(ge_candidate)
-                        if translations:
-                            break
-
-                if not translations and language == "German" and compound_splitter:
-                    split_parts = processor.split_compound(lemma, compound_splitter)
-                    if split_parts:
-                        part_translation_lines = []
-                        for part in split_parts:
-                            part_translations = dictionary.lookup(part)
-                            if not part_translations:
-                                part_translation_lines = []
-                                break
-                            part_translation_lines.append(f"{part}: {', '.join(part_translations[:2])}")
-
-                        if part_translation_lines:
-                            translations = [f"[compound] {' + '.join(split_parts)}"] + part_translation_lines
-
-                vocab_dict[lemma] = translations
+                processor.vocabulary[lemma]["translations"] = translations
                 if translations:
                     translated_count += 1
-                    vocab_lines.append(f"{lemma}: {', '.join(translations[:3])}")
-                else:
-                    vocab_lines.append(f"{lemma}: [no translation found]")
 
-            translation_rate = (translated_count / total_lemmas * 100) if total_lemmas else 0.0
-            summary_line = (
-                f"\n\nTranslated: {translated_count}/{total_lemmas} "
-                f"({translation_rate:.1f}%)"
-            )
-
-            self.view.output_area.setPlainText("\n".join(vocab_lines) + summary_line)
-            self.vocab_dict = vocab_dict
+            translation_rate = (translated_count / len(processor.vocabulary) * 100)
+            self.vocab_dict = processor.vocabulary
             self.last_text = text
-            self._reset_progress(
-                f"Done ({translated_count}/{total_lemmas} translated, {translation_rate:.1f}%)"
-            )
+            self.view.output_area.setPlainText(f"Processed {len(processor.vocabulary)} unique lemmas. Found translations for {translated_count} ({translation_rate:.1f}%).")
         finally:
             self._set_controls_enabled(True)
 

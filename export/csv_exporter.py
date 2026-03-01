@@ -32,7 +32,13 @@ class CSVExporter:
             
             # Write vocabulary entries
             for lemma in sorted(vocab_dict.keys()):
-                translations = vocab_dict[lemma]
+                entry = vocab_dict[lemma]
+                if isinstance(entry, dict):
+                    translations = entry.get('translations', [])
+                elif isinstance(entry, list):
+                    translations = entry
+                else:
+                    translations = []
                 if translations:
                     # Join translations with line breaks for better readability
                     translation_text = '<br>'.join(translations[:5])  # Limit to first 5 translations
